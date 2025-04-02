@@ -1,38 +1,32 @@
 import socket
 import threading
-from encryption import decrypt_message
 from storage import save_message
 
-def create_handler(my_id):
+def create_handler(my_username):
     def handle_client(conn, addr):
         try:
-            sender_id = b""
-            while not sender_id.endswith(b"\n"):
-                sender_id += conn.recv(1)
-            sender_id = sender_id.decode().strip()
+            sender_username = b""
+            while not sender_username.endswith(b"\n"):
+                sender_username += conn.recv(1)
+            sender_username = sender_username.decode().strip()
 
-            encrypted = conn.recv(1024)
+            message = conn.recv(1024).decode()
 
-            # Decrypt using your own ID (receiver's ID)
-            message = decrypt_message(my_id, encrypted)
-
-            save_message(sender_id, message)
+            print(f"[{message}]")
+            save_message(sender_username, message)
         except Exception as e:
             print(f"[RECEIVE ERROR] {e}")
         finally:
             conn.close()
     return handle_client
 
-def start_listener(port):
-    my_ip = "127.0.0.1" # forcing it for testing
-    my_id = f"{my_ip}:{port}"
-
+def start_listener(port, my_username):
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind(('', port))
     server.listen()
-    print(f"[LISTENING on port {port}]")
+    print(f"[LISTENING] on port {port}")
 
-    handler = create_handler(my_id)
+    handler = create_handler(my_username)
 
     while True:
         conn, addr = server.accept()

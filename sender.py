@@ -1,14 +1,14 @@
 import socket
-from encryption import encrypt_message
 
-def send_message(ip, port, message, my_id):
-    peer_id = f"{ip}:{port}"  # This is the receiver's ID
-    full_payload = f"{my_id}|{message}"  # Include sender ID
-    encrypted = encrypt_message(peer_id, full_payload)
+def send_message(ip, port, message, my_username, recipient_username):
+    payload = f"{message}"
 
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((ip, port))
-    sock.sendall(my_id.encode() + b"\n")  # Send sender ID (for logging)
-    sock.sendall(encrypted)               # Send encrypted message
-    sock.close()
-    print(f"[SENT ENCRYPTED] to {peer_id}")
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect((ip, port))
+        sock.sendall(my_username.encode() + b"\n")  # Send sender's username
+        sock.sendall(payload.encode())              # Send plain text message
+        sock.close()
+        print(f"[SENT] to {recipient_username} ({ip}:{port})")
+    except Exception as e:
+        print(f"[SEND ERROR] {e}")

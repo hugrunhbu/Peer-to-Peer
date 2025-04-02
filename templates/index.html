@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Peer-to-Peer Messaging system</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        max-width: 600px;
+        margin: 40px auto;
+      }
+      input,
+      button {
+        padding: 8px;
+        margin: 5px;
+        width: 100%;
+      }
+    </style>
+    <form action="/logout" method="GET">
+      <button type="submit">Log Out</button>
+    </form>
+  </head>
+  <body>
+    <h1>Send a Message</h1>
+    <form method="POST">
+      <label>Recipient Username:</label>
+      <input type="text" name="recipient" required />
+
+      <label>Recipient IP:</label>
+      <input type="text" name="ip" placeholder="ex: 127.0.0.1" required />
+
+      <label>Recipient Port:</label>
+      <input type="text" name="port" placeholder="ex: 5051" required />
+
+      <label>Message:</label>
+      <input type="text" name="message" required />
+
+      <button type="submit">Send</button>
+    </form>
+    <hr />
+    <h2>Messages</h2>
+    <div style="background: #f4f4f4; padding: 10px; border-radius: 5px">
+      {% for message in messages %}
+      <div>{{ message }}</div>
+      {% endfor %}
+    </div>
+    <h3>Active Users</h3>
+    <ul id="active-users-list">
+      <!-- populated by javascript -->
+    </ul>
+
+    <script>
+      async function fetchActiveUsers() {
+        try {
+          const res = await fetch("/get_active_users");
+          const data = await res.json();
+
+          const list = document.getElementById("active-users-list");
+          list.innerHTML = ""; // clear old list
+
+          for (const [user, info] of Object.entries(data)) {
+            const li = document.createElement("li");
+            li.innerHTML = `<strong>${user}</strong> on port ${info.port}`;
+            list.appendChild(li);
+          }
+        } catch (err) {
+          console.error("Failed to fetch active users: ", err);
+        }
+      }
+      // fetch every 3 seconds
+      setInterval(fetchActiveUsers, 3000);
+      fetchActiveUsers(); // initial load
+    </script>
+  </body>
+</html>
