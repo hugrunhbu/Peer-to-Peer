@@ -18,24 +18,15 @@
     <form action="/logout" method="GET">
       <button type="submit">Log Out</button>
     </form>
-  </head>
-  <body>
-    <h1>Send a Message</h1>
-    <form method="POST">
-      <label>Recipient Username:</label>
-      <input type="text" name="recipient" required />
+    
+    {% with messages = get_flashed_messages() %} {% if messages %}
+    <ul style="color: green">
+      {% for message in messages %}
+      <li>{{ message }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %} {% endwith %}
 
-      <label>Recipient IP:</label>
-      <input type="text" name="ip" placeholder="ex: 127.0.0.1" required />
-
-      <label>Recipient Port:</label>
-      <input type="text" name="port" placeholder="ex: 5051" required />
-
-      <label>Message:</label>
-      <input type="text" name="message" required />
-
-      <button type="submit">Send</button>
-    </form>
     <h3>Active Users</h3>
     <ul id="active-users-list">
       <!-- populated by javascript -->
@@ -63,5 +54,22 @@
       setInterval(fetchActiveUsers, 3000);
       fetchActiveUsers(); // initial load
     </script>
+    <h3>Add a Friend</h3>
+    <form method="POST" action="/add_friend">
+      <input type="text" name="friend_name" placeholder="Username" required />
+      <input
+        type="text"
+        name="friend_ip"
+        placeholder="IP (e.g. 127.0.0.1)"
+        required
+      />
+      <input
+        type="text"
+        name="friend_port"
+        placeholder="Port (e.g. 5051)"
+        required
+      />
+      <button type="submit">Add Friend</button>
+    </form>
   </body>
 </html>

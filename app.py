@@ -1,7 +1,8 @@
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash
 from sender import send_message
 from listener import start_listener
 from presence import register_active_user, load_users, remove_active_user
+from friends import save_friend, is_friend, get_friend_info
 import threading
 import os
 import glob
@@ -53,26 +54,42 @@ def home():
     if "username" not in session or "port" not in session:
         return redirect(url_for("login"))
 
-    if request.method == "POST":
-        recipient = request.form["recipient"]
-        ip = request.form["ip"]
-        port = int(request.form["port"])
-        message = request.form["message"]
-
-        send_message(ip, port, message, session['username'], recipient)
-        return redirect(url_for("home"))
-
     return render_template(
         "index.html",
         my_username=session["username"],
         active_users=load_users()
     )
 
+# handling friends
+@app.route("/add_friend", methods=["POST"])
+def add_friend():
+    print("[DEBUG] session =", dict(session))
+    if "username" not in session:
+        return redirect(url_for("login"))
+    
+    name = request.form["friend_name"]
+    ip = request.form["friend_ip"]
+    port = int(request.form["friend_port"])
+    save_friend(name, ip, port)
+
+    flash(f"{name} was added as a friend!")
+    return redirect(url_for("home"))
+
 # Chat view with specific user
 @app.route("/chat/<recipient>", methods=["GET", "POST"])
 def chat_with_user(recipient):
     if "username" not in session:
         return redirect(url_for("login"))
+    
+    if not is_friend(recipient):
+        return "You are not friends with this user yet. Go back and add them first.", 403
+    
+    if request.method == "POST":
+        message = request.form["message"]
+        friend_info = get_friend_info(recipient)
+
+        if friend_info:
+            send_message(friend_info["ip"], friend_info["port"], message, session["username"], recipient)
 
     messages = []
     filename = f"messages/{recipient}.txt"
