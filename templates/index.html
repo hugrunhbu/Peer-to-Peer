@@ -36,13 +36,6 @@
 
       <button type="submit">Send</button>
     </form>
-    <hr />
-    <h2>Messages</h2>
-    <div style="background: #f4f4f4; padding: 10px; border-radius: 5px">
-      {% for message in messages %}
-      <div>{{ message }}</div>
-      {% endfor %}
-    </div>
     <h3>Active Users</h3>
     <ul id="active-users-list">
       <!-- populated by javascript -->
@@ -59,7 +52,7 @@
 
           for (const [user, info] of Object.entries(data)) {
             const li = document.createElement("li");
-            li.innerHTML = `<strong>${user}</strong> on port ${info.port}`;
+            li.innerHTML = `<a href="/chat/${user}"><strong>${user}</strong></a> on port ${info.port}`;
             list.appendChild(li);
           }
         } catch (err) {
