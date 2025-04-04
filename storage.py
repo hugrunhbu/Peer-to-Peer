@@ -37,15 +37,7 @@ def init_db():
                     last_seen TEXT NOT NULL
                 )
             """)
-            # create blocking table
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS blocked (
-                    blocker TEXT NOT NULL,
-                    blocked TEXT NOT NULL,
-                    PRIMARY KEY (blocker, blocked)
-                )
-            """)
-        print("[DB] messages.db created with messages, presence, blocking, and friends table")
+        print("[DB] messages.db created with messages, presence, and friends table")
 
 def save_message(sender, recipient, content):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
