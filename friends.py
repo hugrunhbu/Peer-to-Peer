@@ -1,27 +1,39 @@
-import json
-import os
-import flask
+import sqlite3
 
-def get_friends_file():
-    username = flask.session.get("username", "unknown")
-    return f"friends_{username}.json"
+DB_NAME = "messages.db"
 
-def load_friends():
-    filename = get_friends_file()
-    if not os.path.exists(filename):
-        return {}
-    with open(filename, "r") as f:
-        return json.load(f)
-    
-def save_friend(username, ip, port):
-    friends = load_friends()
-    friends[username] = {"ip": ip, "port": port}
-    with open(get_friends_file(), "w") as f:
-        json.dump(friends, f, indent=2)
+def add_friend(owner, friend_name, ip, port):
+    with sqlite3.connect(DB_NAME) as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT OR REPLACE INTO friends (owner, friend_name, ip, port)
+            VALUES (?, ?, ?, ?)
+        """, (owner, friend_name, ip, port))
+        conn.commit()
 
-def is_friend(username):
-    friends = load_friends()
-    return username in friends
+def get_friends(owner):
+    with sqlite3.connect(DB_NAME) as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT friend_name, ip, port
+            FROM friends
+            WHERE owner = ?
+        """, (owner,))
+        return {row[0]: {"ip": row[1], "port": row[2]} for row in cursor.fetchall()}
 
-def get_friend_info(username):
-    return load_friends().get(username)
+def is_friend(owner, friend_name):
+    with sqlite3.connect(DB_NAME) as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT 1 FROM friends WHERE owner = ? AND friend_name = ?
+        """, (owner, friend_name))
+        return cursor.fetchone() is not None
+
+def get_friend_info(owner, friend_name):
+    with sqlite3.connect(DB_NAME) as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT ip, port FROM friends WHERE owner = ? AND friend_name = ?
+        """, (owner, friend_name))
+        result = cursor.fetchone()
+        return {"ip": result[0], "port": result[1]} if result else None

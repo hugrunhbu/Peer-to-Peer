@@ -2,7 +2,10 @@ from flask import Flask, render_template, request, redirect, url_for, session, j
 from sender import send_message
 from listener import start_listener
 from presence import register_active_user, load_users, remove_active_user
-from friends import save_friend, is_friend, get_friend_info
+from friends import is_friend, get_friend_info
+from storage import init_db, get_conversation, save_message
+from friends import get_friends, add_friend
+from utils import get_local_ip
 import threading
 import os
 import glob
@@ -11,6 +14,14 @@ app = Flask(__name__)
 app.secret_key = "super-secret-key"  # required for sessions
 
 listener_started = False
+
+init_db()
+
+@app.before_request
+def clear_if_restarted():
+    if 'initialized' not in session:
+        session.clear()
+        session['initialized'] = True
 
 # Redirect base route to login
 @app.route("/")
@@ -26,7 +37,7 @@ def login():
         session['username'] = request.form['username']
         session['port'] = int(request.form['port'])
 
-        register_active_user(session['username'], session['port'])
+        register_active_user(session['username'], session['port'], get_local_ip())
 
         if not listener_started:
             threading.Thread(
@@ -53,76 +64,76 @@ def logout():
 def home():
     if "username" not in session or "port" not in session:
         return redirect(url_for("login"))
+    
+    friends = get_friends(session['username'])
 
     return render_template(
         "index.html",
         my_username=session["username"],
-        active_users=load_users()
+        active_users=load_users(),
+        friends=friends
     )
 
 # handling friends
 @app.route("/add_friend", methods=["POST"])
-def add_friend():
-    print("[DEBUG] session =", dict(session))
+def add_friend_route():
     if "username" not in session:
         return redirect(url_for("login"))
-    
+
     name = request.form["friend_name"]
     ip = request.form["friend_ip"]
     port = int(request.form["friend_port"])
-    save_friend(name, ip, port)
-
-    flash(f"{name} was added as a friend!")
+    add_friend(session['username'], name, ip, port)
     return redirect(url_for("home"))
+
+@app.route("/get_messages/<recipient>")
+def get_messages(recipient):
+    if "username" not in session:
+        return jsonify([])
+
+    from storage import get_conversation
+    messages = get_conversation(session["username"], recipient)
+
+    return jsonify([
+        {"sender": sender, "timestamp": timestamp, "content": content}
+        for (sender, timestamp, content) in messages
+    ])
+
 
 # Chat view with specific user
 @app.route("/chat/<recipient>", methods=["GET", "POST"])
 def chat_with_user(recipient):
     if "username" not in session:
         return redirect(url_for("login"))
-    
-    if not is_friend(recipient):
-        return "You are not friends with this user yet. Go back and add them first.", 403
-    
+
+    if not is_friend(session['username'], recipient):
+        return "You are not friends with this user yet.", 403
+
+    # Handle sending
     if request.method == "POST":
         message = request.form["message"]
-        friend_info = get_friend_info(recipient)
-
+        friend_info = get_friend_info(session['username'], recipient)
         if friend_info:
-            send_message(friend_info["ip"], friend_info["port"], message, session["username"], recipient)
+            send_message(
+                friend_info["ip"],
+                friend_info["port"],
+                message,
+                session["username"],
+                recipient
+            )
+            # save locally
+            save_message(session["username"], recipient, message)
+    messages = get_conversation(session["username"], recipient)
 
-    messages = []
-    filename = f"messages/{recipient}.txt"
-    if os.path.exists(filename):
-        with open(filename, "r") as f:
-            messages = f.readlines()
-
+    # Handle displaying
     return render_template("chat.html", recipient=recipient, messages=messages)
+
 
 # API for frontend to fetch live active user list
 @app.route("/get_active_users")
 def get_active_users():
     return jsonify(load_users())
 
-# backend API route to return messages
-@app.route("/get_messages/<recipient>")
-def get_messages(recipient):
-    messages = []
-    filename = f"messages/{recipient}.txt"
-    if os.path.exists(filename):
-        with open(filename, "r") as f:
-            messages = [line.strip() for line in f]
-    return jsonify(messages)
-
-# Optional helper to list all saved messages
-def get_all_messages():
-    all_messages = []
-    for filepath in sorted(glob.glob("messages/*.txt")):
-        with open(filepath, "r") as f:
-            for line in f:
-                sender = os.path.basename(filepath).replace(".txt", "")
-                all_messages.append(f"{sender}: {line.strip()}")
-    return all_messages
 
 if __name__ == "__main__":
     app.run(debug=True)

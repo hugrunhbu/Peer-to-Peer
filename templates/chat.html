@@ -17,10 +17,22 @@
         border-radius: 5px;
         max-height: 300px;
         overflow-y: auto;
+        margin-bottom: 10px;
       "
     >
       <!-- Messages will be loaded here -->
     </div>
+
+    <form method="POST">
+      <input
+        type="text"
+        name="message"
+        placeholder="Type your message..."
+        required
+        style="width: 70%"
+      />
+      <button type="submit">Send</button>
+    </form>
 
     <script>
       async function fetchMessages() {
@@ -33,30 +45,20 @@
 
           for (const msg of messages) {
             const div = document.createElement("div");
-            div.textContent = msg;
+            div.innerHTML = `<strong>${msg.sender}</strong> [${msg.timestamp}]: ${msg.content}`;
             chatBox.appendChild(div);
           }
 
-          // Optional: auto scroll to bottom
+          // Scroll to bottom
           chatBox.scrollTop = chatBox.scrollHeight;
         } catch (err) {
           console.error("Failed to fetch messages", err);
         }
       }
 
-      setInterval(fetchMessages, 2000); // poll every 2 seconds
+      // Fetch messages every 2 seconds
+      setInterval(fetchMessages, 2000);
       fetchMessages(); // initial load
     </script>
-
-    <form method="POST">
-      <input
-        type="text"
-        name="message"
-        placeholder="Type your message..."
-        required
-        style="width: 80%"
-      />
-      <button type="submit">Send</button>
-    </form>
   </body>
 </html>

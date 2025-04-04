@@ -71,5 +71,22 @@
       />
       <button type="submit">Add Friend</button>
     </form>
+    <h2>Your Friends</h2>
+    <ul>
+        {% for name, info in friends.items() %}
+            <li>
+                <a href="/chat/{{ name }}">{{ name }}</a>
+                ({{ info.ip }}:{{ info.port }})
+                {% if name in active_users %}
+                    <span style="color: green;">● online</span>
+                {% else %}
+                    <span style="color: gray;">● offline</span>
+                {% endif %}
+
+            </li>
+        {% else %}
+            <li>No friends yet. Add someone below 👇</li>
+        {% endfor %}        
+    </ul>
   </body>
 </html>

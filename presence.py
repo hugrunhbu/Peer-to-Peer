@@ -1,38 +1,26 @@
-import json
-import os
-import atexit
-import datetime
+import sqlite3
+from datetime import datetime
 
-FILENAME = "active_users.json"
+DB_NAME = "messages.db"
 
-# clean on exit
-def cleanup():
-    if os.path.exists(FILENAME):
-        os.remove(FILENAME)
-atexit.register(cleanup)
-
-def register_active_user(username, port):
-    data = load_users()
-    data[username] = {
-        "port": port,
-        "timestamp": datetime.datetime.now().isoformat()
-    }
-    with open(FILENAME, "w") as f:
-        json.dump(data, f, indent=2)
+def register_active_user(username, port, ip="127.0.0.1"):
+    timestamp = datetime.now().isoformat()
+    with sqlite3.connect(DB_NAME) as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT OR REPLACE INTO presence (username, ip, port, last_seen)
+            VALUES (?, ?, ?, ?)
+        """, (username, ip, port, timestamp))
+        conn.commit()
 
 def load_users():
-    if not os.path.exists(FILENAME):
-        return {}
-    with open(FILENAME, "r") as f:
-        return json.load(f)
-    
-# when a user logs out they're not marked as an active user anymore
+    with sqlite3.connect(DB_NAME) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT username, ip, port FROM presence")
+        return {row[0]: {"ip": row[1], "port": row[2]} for row in cursor.fetchall()}
+
 def remove_active_user(username):
-    if not os.path.exists(FILENAME):
-        return
-    with open(FILENAME, "r") as f:
-        data = json.load(f)
-    if username in data:
-        del data[username]
-        with open(FILENAME, "w") as f:
-            json.dump(data, f, indent=2)
+    with sqlite3.connect(DB_NAME) as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM presence WHERE username = ?", (username,))
+        conn.commit()
